@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAP Data Health Checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f6f2;
+    --surface: #ffffff;
+    --surface2: #f0ede8;
+    --border: #e0ddd7;
+    --border2: #ccc9c3;
+    --accent: #1D9E75;
+    --accent-dim: rgba(29,158,117,0.1);
+    --text: #1a1a1a;
+    --muted: #6b6861;
+    --danger: #A32D2D;
+    --warning: #854F0B;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 600px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header { margin-bottom: 2.5rem; animation: fadeUp 0.5s ease both; }
+
+  .wordmark {
+    font-family: 'Syne', sans-serif;
+    font-size: 42px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .wordmark span { color: var(--accent); }
+
+  .tagline {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 6px;
+    font-weight: 300;
+  }
+
+  .api-notice {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 2rem;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 300;
+    animation: fadeUp 0.5s 0.05s ease both;
+  }
+
+  .api-notice strong { color: var(--text); font-weight: 500; }
+
+  .api-key-row { display: flex; gap: 8px; margin-top: 10px; }
+
+  .api-key-row input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  .api-key-row input:focus { outline: none; border-color: var(--accent); }
+
+  .api-key-row button {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+
+  .progress-wrap { margin-bottom: 2.25rem; animation: fadeUp 0.5s 0.08s ease both; }
+
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .progress-track { height: 2px; background: var(--border); border-radius: 99px; }
+
+  .progress-fill {
+    height: 2px;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .step { display: none; animation: fadeUp 0.35s ease both; }
+  .step.active { display: block; }
+
+  .category-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid rgba(29,158,117,0.2);
+    border-radius: 99px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.07em;
+    padding: 4px 11px;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+
+  .question {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+
+  .hint {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 300;
+    padding: 13px 15px;
+    resize: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    line-height: 1.6;
+  }
+
+  textarea::placeholder { color: var(--muted); opacity: 0.7; }
+
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(29,158,117,0.08);
+  }
+
+  .btn-next {
+    margin-top: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+
+  .btn-next:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-next:active { transform: scale(0.97); }
+
+  .error-msg {
+    font-size: 12px;
+    color: var(--danger);
+    margin-top: 8px;
+    display: none;
+  }
+
+  .loading { display: none; text-align: center; padding: 4rem 0; animation: fadeUp 0.35s ease both; }
+  .loading.active { display: block; }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1.25rem;
+  }
+
+  .loading-text {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Result ── */
+  .result { display: none; animation: fadeUp 0.4s ease both; }
+  .result.active { display: block; }
+
+  .result-header { margin-bottom: 2rem; }
+
+  .result-super {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .result-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--text);
+  }
+
+  .overall-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .big-score {
+    font-family: 'Syne', sans-serif;
+    font-size: 68px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .big-score span {
+    font-size: 20px;
+    color: var(--muted);
+    font-weight: 400;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .overall-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 5px;
+  }
+
+  .overall-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  .sub-scores {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .sub-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+
+  .sub-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .sub-score-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .sub-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  .sub-denom { font-size: 12px; color: var(--muted); font-weight: 300; }
+
+  .bar-track { height: 3px; background: var(--border); border-radius: 99px; }
+
+  .bar-fill {
+    height: 3px;
+    border-radius: 99px;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .diag-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .diag-label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .diag-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .diag-body {
+    font-size: 14px;
+    font-weight: 300;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .btn-restart {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 1.5rem;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .btn-restart:hover { border-color: var(--border2); color: var(--text); }
+
+  /* ── Chat ── */
+  .chat-wrap {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
+  }
+
+  .chat-header {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .chat-messages { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1rem; }
+
+  .chat-bubble {
+    max-width: 86%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+
+  .chat-bubble.user {
+    background: var(--accent);
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 3px;
+  }
+
+  .chat-bubble.coach {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    align-self: flex-start;
+    border-bottom-left-radius: 3px;
+  }
+
+  .chat-bubble.typing { color: var(--muted); font-style: italic; }
+
+  .chat-input-row { display: flex; gap: 8px; align-items: flex-end; }
+  .chat-input-row textarea { flex: 1; }
+
+  .chat-send {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+    font-size: 16px;
+  }
+
+  .chat-send:hover { opacity: 0.85; }
+  .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="wordmark">SAP <span>Data Health</span> Checker</div>
+    <div class="tagline">Answer 11 questions. Get a scored diagnosis of your SAP &amp; BI environment.</div>
+  </div>
+
+  <div class="api-notice" id="apiNotice">
+    <strong>Anthropic API key</strong> — stored in your browser only, never sent elsewhere.
+    <div class="api-key-row">
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+      <button onclick="saveKey()">Save</button>
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-meta">
+      <span id="stepLabel">Step 1 of 11</span>
+      <span id="stepPct">9%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:9%"></div>
+    </div>
+  </div>
+
+  <div id="stepsWrap">
+
+    <div class="step active" id="step-0">
+      <div class="category-badge"><i class="ti ti-database"></i> SAP Modules</div>
+      <div class="question">Which SAP products or modules are you currently running?</div>
+      <div class="hint">List what you have — e.g. ECC, S/4HANA, SAP BW, SAP Analytics Cloud, SuccessFactors, Ariba, or others. If you're not sure of the exact names, describe what it does.</div>
+      <textarea id="ans-0" rows="3" placeholder='e.g. "We run SAP ECC 6.0 with modules SD, MM, FI/CO. Also have SAP BW for reporting."'></textarea>
+      <button class="btn-next" onclick="next(0)">Next <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-0">Please write something before continuing.</div>
+    </div>
+
+    <div class="step" id="step-1">
+      <div class="category-badge"><i class="ti ti-database"></i> SAP Modules</div>
+      <div class="question">How old is your SAP landscape, and have you done any major upgrades recently?</div>
+      <div class="hint">Roughly when was it implemented, and is it on the latest version? Any migrations planned?</div>
+      <textarea id="ans-1" rows="3" placeholder='e.g. "Implemented in 2012, still on ECC 6.0. We are planning an S/4HANA migration in 2026."'></textarea>
+      <button class="btn-next" onclick="next(1)">Next <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-1">Please write something before continuing.</div>
+    </div>
+
+    <div class="step" id="step-2">
+      <div class="category-badge"><i class="ti ti-alert-triangle"></i> Data Quality</div>
+      <div class="question">How would you rate the quality of your master data?</div>
+      <div class="hint">Master data means your core records — customers, vendors, materials, cost centres. Are they complete, accurate, and consistent? Or are there known issues like duplicates, missing fields, or conflicting records?</div>
+      <textarea id="ans-2" rows="3" placeholder='e.g. "Our customer master has many duplicates. Vendor records are mostly fine but some are outdated."'></textarea>
+      <button class="btn-next" onclick="next(2)">Next <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-2">Please write something before continuing.</div>
+    </div>
+
+    <div class="step" id="step-3">
+      <div class="category-badge"><i class="ti ti-alert-triangle"></i> Data Quality</div>
+      <div class="question">Do you have any active process for catching or fixing bad data?</div>
+      <div class="hint">Is there a data governance owner, automated validation rules, or regular data cleansing runs? Or does bad data only get noticed when something breaks?</div>
+      <textarea id="ans-3" rows="3" placeholder='e.g. "No formal process. Issues are usually spotted by finance when month-end reports look wrong."'></textarea>
+      <button class="btn-next" onclick="next(3)">Next <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-3">Please write something before continuing.</div>
+    </div>
+
+    <div class="step" id="step-4">
+      <div class="category-badge"><i class="ti ti-plug-connected"></i> Integrations</div>
+      <div class="question">What other systems connect to your SAP environment?</div>
+      <div class="hint">Think CRM, ecommerce, logistics platforms, HR systems, external databases, spreadsheets. List whatever feeds data into or pulls data from SAP.</div>
+      <textarea id="ans-4" rows="3" placeholder='e.g. "Salesforce CRM, a custom WMS for warehousing, and our webshop via middleware. Finance also exports a lot to Excel."'></textarea>
+      <button class="btn-next" onclick="next(4)">Next <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-4">Please write something before continuing.</div>
+    </div>
+
+    <div class="step" id="step-5">
+      <div class="category-badge"><i class="ti ti-plug-connected"></i> Integrations</div>
+      <div class="question">How does data flow between those systems and SAP?</div>
+      <div class="hint">Is it automated in real-time, batch synced on a schedule, or moved manually (e.g. CSV uploads, copy-paste)? Are there known failures or delays in these transfers?</div>
+      <textarea id="ans-5" rows="3" placeholder='e.g. "Salesforce syncs nightly via an API. The WMS integration breaks occasionally and needs manual intervention."'></textarea>
+      <button class="btn-next" onclick="next(5)">Next <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-5">Please write something before continuing.</div>
+    </div>
+
+    <div class="step" id="step-6">
+      <div class="category-badge"><i class="ti ti-users"></i> User Adoption</div>
+      <div class="question">What percentage of your intended users actively use SAP's reporting or BI tools?</div>
+      <div class="hint">Think about who was supposed to use the system versus who actually does. Do people rely on SAP dashboards, or do they go straight to Excel?</div>
+      <textarea id="ans-6" rows="3" placeholder='e.g. "Maybe 40%. Most of the sales team ignores the dashboards and asks someone to send them an Excel export."'></textarea>
+      <button class="btn-next" onclick="next(6)">Next <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-6">Please write something before continuing.</div>
+    </div>
+
+    <div class="step" id="step-7">
+      <div class="category-badge"><i class="ti ti-users"></i> User Adoption</div>
+      <div class="question">How was training handled when SAP was rolled out — and is there ongoing support?</div>
+      <div class="hint">Was there formal training, documentation, key user programs? What happens when someone new joins or needs help today?</div>
+      <textarea id="ans-7" rows="3" placeholder='e.g. "We had training during go-live in 2012 but nothing since. New starters learn from colleagues informally."'></textarea>
+      <button class="btn-next" onclick="next(7)">Next <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-7">Please write something before continuing.</div>
+    </div>
+
+    <div class="step" id="step-8">
+      <div class="category-badge"><i class="ti ti-chart-line"></i> Planning & Forecasting</div>
+      <div class="question">How do you handle financial or operational planning — inside SAP or outside it?</div>
+      <div class="hint">Do you use SAP's planning tools (BPC, IBP, SAP Analytics Cloud planning), or does your team plan and budget in Excel or another tool disconnected from SAP?</div>
+      <textarea id="ans-8" rows="3" placeholder='e.g. "All budgeting is done in Excel. We import final numbers into SAP at year end but planning is completely separate."'></textarea>
+      <button class="btn-next" onclick="next(8)">Next <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-8">Please write something before continuing.</div>
+    </div>
+
+    <div class="step" id="step-9">
+      <div class="category-badge"><i class="ti ti-chart-line"></i> Planning & Forecasting</div>
+      <div class="question">How confident are you in the accuracy of your forecasts and management reports?</div>
+      <div class="hint">Do decision-makers trust the numbers they see? Are there frequent corrections, "version confusion", or debates about which figure is right?</div>
+      <textarea id="ans-9" rows="3" placeholder='e.g. "There is often disagreement between finance and sales about the numbers. We sometimes find errors after reports are sent."'></textarea>
+      <button class="btn-next" onclick="next(9)">Next <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-9">Please write something before continuing.</div>
+    </div>
+
+    <div class="step" id="step-10">
+      <div class="category-badge"><i class="ti ti-bulb"></i> Overall</div>
+      <div class="question">What is your single biggest pain point with your current SAP or BI setup?</div>
+      <div class="hint">Be as specific as you can. This shapes the tone and priority of your diagnosis.</div>
+      <textarea id="ans-10" rows="4" placeholder='e.g. "We can\'t make fast decisions because by the time we\'ve agreed on what the numbers actually are, the moment has passed."'></textarea>
+      <button class="btn-next" onclick="diagnose()">Get my diagnosis <i class="ti ti-arrow-right"></i></button>
+      <div class="error-msg" id="err-10">Please write something before continuing.</div>
+    </div>
+
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loadingText">Analysing your SAP environment...</div>
+  </div>
+
+  <div class="result" id="result">
+    <div class="result-header">
+      <div class="result-super">✓ Diagnosis complete</div>
+      <div class="result-title">Your SAP Data Health Report</div>
+    </div>
+
+    <div class="overall-card">
+      <div class="big-score" id="bigScore">—<span>/100</span></div>
+      <div>
+        <div class="overall-label" id="overallLabel">Overall Data Health Score</div>
+        <div class="overall-desc" id="overallDesc"></div>
+      </div>
+    </div>
+
+    <div class="sub-scores" id="subScores"></div>
+
+    <div class="diag-card">
+      <div class="diag-label"><span class="diag-dot"></span>Key findings</div>
+      <div class="diag-body" id="resFindings"></div>
+    </div>
+    <div class="diag-card">
+      <div class="diag-label"><span class="diag-dot"></span>Priority recommendations</div>
+      <div class="diag-body" id="resRecommendations"></div>
+    </div>
+    <div class="diag-card">
+      <div class="diag-label"><span class="diag-dot"></span>Critical risks to address first</div>
+      <div class="diag-body" id="resRisks"></div>
+    </div>
+
+    <button class="btn-restart" onclick="restart()">← Run a new assessment</button>
+
+    <div class="chat-wrap">
+      <div class="chat-header">Questions about your diagnosis?</div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <textarea id="chatInput" rows="1" placeholder="Ask anything about your results or next steps..."></textarea>
+        <button class="chat-send" onclick="sendChat()" id="chatSendBtn" aria-label="Send">
+          <i class="ti ti-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentStep = 0;
+  const totalSteps = 11;
+  let apiKey = localStorage.getItem('dhc_api_key') || '';
+  let chatHistory = [];
+  let diagnosisContext = '';
+
+  if (apiKey) document.getElementById('apiNotice').style.display = 'none';
+
+  function saveKey() {
+    const val = document.getElementById('apiKeyInput').value.trim();
+    if (!val) return;
+    apiKey = val;
+    localStorage.setItem('dhc_api_key', val);
+    document.getElementById('apiNotice').style.display = 'none';
+  }
+
+  function updateProgress(step) {
+    const pct = Math.round(((step + 1) / totalSteps) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('stepLabel').textContent = 'Step ' + (step + 1) + ' of ' + totalSteps;
+    document.getElementById('stepPct').textContent = pct + '%';
+  }
+
+  function next(i) {
+    const val = document.getElementById('ans-' + i).value.trim();
+    if (!val) { document.getElementById('err-' + i).style.display = 'block'; return; }
+    document.getElementById('err-' + i).style.display = 'none';
+    document.getElementById('step-' + i).classList.remove('active');
+    currentStep = i + 1;
+    document.getElementById('step-' + currentStep).classList.add('active');
+    updateProgress(currentStep);
+    setTimeout(() => document.getElementById('ans-' + currentStep).focus(), 50);
+  }
+
+  function scoreColor(score, max) {
+    const pct = score / max;
+    if (pct >= 0.75) return '#1D9E75';
+    if (pct >= 0.5)  return '#854F0B';
+    return '#A32D2D';
+  }
+
+  const loadMsgs = [
+    'Analysing your SAP environment...',
+    'Scoring each category...',
+    'Building your recommendations...',
+    'Almost done...'
+  ];
+
+  async function diagnose() {
+    const val = document.getElementById('ans-10').value.trim();
+    if (!val) { document.getElementById('err-10').style.display = 'block'; return; }
+    if (!apiKey) { alert('Please enter your Anthropic API key at the top first.'); return; }
+
+    const answers = {
+      sap_modules:   document.getElementById('ans-0').value.trim(),
+      sap_age:       document.getElementById('ans-1').value.trim(),
+      data_quality:  document.getElementById('ans-2').value.trim(),
+      data_process:  document.getElementById('ans-3').value.trim(),
+      integrations:  document.getElementById('ans-4').value.trim(),
+      data_flow:     document.getElementById('ans-5').value.trim(),
+      adoption:      document.getElementById('ans-6').value.trim(),
+      training:      document.getElementById('ans-7').value.trim(),
+      planning:      document.getElementById('ans-8').value.trim(),
+      forecast_conf: document.getElementById('ans-9').value.trim(),
+      pain_point:    document.getElementById('ans-10').value.trim()
+    };
+
+    document.getElementById('stepsWrap').style.display = 'none';
+    document.getElementById('progressWrap').style.display = 'none';
+    document.getElementById('loading').classList.add('active');
+
+    let mi = 0;
+    const interval = setInterval(() => {
+      mi = (mi + 1) % loadMsgs.length;
+      document.getElementById('loadingText').textContent = loadMsgs[mi];
+    }, 2000);
+
+    const system = `You are a senior SAP and Business Intelligence consultant. You diagnose the health of a company's SAP and BI environment based on their answers to an assessment questionnaire.
+
+Respond ONLY with a raw JSON object — no markdown, no backticks, nothing before or after. Use exactly this format:
+{
+  "overall": <integer 0-100>,
+  "overall_label": <string: one of "Critical", "Poor", "Moderate", "Good", "Excellent">,
+  "overall_desc": <string: 1-2 sentences summarising the overall situation>,
+  "scores": {
+    "sap_modules": <integer 0-20>,
+    "data_quality": <integer 0-20>,
+    "integrations": <integer 0-20>,
+    "user_adoption": <integer 0-20>,
+    "planning": <integer 0-20>
+  },
+  "findings": <string: 3-5 key findings as a numbered list, specific to their answers>,
+  "recommendations": <string: 3-5 prioritised action items as a numbered list, specific and actionable>,
+  "risks": <string: 2-3 critical risks if nothing changes, written clearly>
+}
+
+Scoring guidance (each category out of 20):
+- SAP Modules: higher for modern landscape (S/4HANA), breadth of modules, recent upgrades. Lower for old ECC with no upgrade plan, minimal modules.
+- Data Quality: higher for clean master data, active governance. Lower for known duplicates, no cleansing process, reactive issue discovery.
+- Integrations: higher for automated stable integrations. Lower for manual transfers, frequent failures, heavy Excel dependency.
+- User Adoption: higher for high active usage, good training, key user programs. Lower for low adoption, Excel workarounds, no ongoing support.
+- Planning: higher for integrated planning inside SAP/BI, trusted reports. Lower for Excel-based planning disconnected from SAP, low forecast confidence.
+
+Be specific and reference what they told you. Do not give generic advice.`;
+
+    const user = `SAP modules in use: ${answers.sap_modules}
+System age and upgrade status: ${answers.sap_age}
+Master data quality: ${answers.data_quality}
+Data governance / cleansing process: ${answers.data_process}
+Connected systems: ${answers.integrations}
+Data flow between systems: ${answers.data_flow}
+User adoption level: ${answers.adoption}
+Training and support: ${answers.training}
+Planning and forecasting approach: ${answers.planning}
+Confidence in reports and forecasts: ${answers.forecast_conf}
+Biggest pain point: ${answers.pain_point}`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1500,
+          system,
+          messages: [{ role: 'user', content: user }]
+        })
+      });
+
+      clearInterval(interval);
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'API error'); }
+
+      const data = await res.json();
+      const raw = data.content[0].text.trim();
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('Unexpected response format');
+      const p = JSON.parse(match[0]);
+
+      document.getElementById('bigScore').innerHTML = p.overall + '<span>/100</span>';
+      document.getElementById('bigScore').style.color = scoreColor(p.overall, 100);
+      document.getElementById('overallLabel').textContent = p.overall_label + ' — Overall Data Health';
+      document.getElementById('overallDesc').textContent = p.overall_desc;
+
+      const cats = [
+        { key: 'sap_modules',  label: 'SAP Modules' },
+        { key: 'data_quality', label: 'Data Quality' },
+        { key: 'integrations', label: 'Integrations' },
+        { key: 'user_adoption',label: 'User Adoption' },
+        { key: 'planning',     label: 'Planning & Forecasting' }
+      ];
+
+      const subWrap = document.getElementById('subScores');
+      subWrap.innerHTML = '';
+      cats.forEach(c => {
+        const score = p.scores[c.key] || 0;
+        const color = scoreColor(score, 20);
+        const pct = Math.round((score / 20) * 100);
+        subWrap.innerHTML += `
+          <div class="sub-card">
+            <div class="sub-label">${c.label}</div>
+            <div class="sub-score-row">
+              <div class="sub-num" style="color:${color}">${score}</div>
+              <div class="sub-denom">/ 20</div>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${pct}%; background:${color}"></div>
+            </div>
+          </div>`;
+      });
+
+      document.getElementById('resFindings').textContent = p.findings;
+      document.getElementById('resRecommendations').textContent = p.recommendations;
+      document.getElementById('resRisks').textContent = p.risks;
+
+      diagnosisContext = `Assessment answers:\n${user}\n\nDiagnosis:\nOverall: ${p.overall}/100 (${p.overall_label})\n${p.overall_desc}\n\nScores:\n${cats.map(c => c.label + ': ' + (p.scores[c.key]||0) + '/20').join('\n')}\n\nFindings:\n${p.findings}\n\nRecommendations:\n${p.recommendations}\n\nRisks:\n${p.risks}`;
+      chatHistory = [];
+      document.getElementById('chatMessages').innerHTML = '';
+
+      document.getElementById('loading').classList.remove('active');
+      document.getElementById('result').classList.add('active');
+
+    } catch (err) {
+      clearInterval(interval);
+      document.getElementById('loading').classList.remove('active');
+      document.getElementById('stepsWrap').style.display = 'block';
+      document.getElementById('progressWrap').style.display = 'block';
+      document.getElementById('step-10').classList.add('active');
+      document.getElementById('err-10').textContent = 'Error: ' + err.message + '. Check your API key and try again.';
+      document.getElementById('err-10').style.display = 'block';
+    }
+  }
+
+  async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    const msgs = document.getElementById('chatMessages');
+    const sendBtn = document.getElementById('chatSendBtn');
+
+    const userBubble = document.createElement('div');
+    userBubble.className = 'chat-bubble user';
+    userBubble.textContent = msg;
+    msgs.appendChild(userBubble);
+    input.value = '';
+    sendBtn.disabled = true;
+
+    const typingBubble = document.createElement('div');
+    typingBubble.className = 'chat-bubble coach typing';
+    typingBubble.textContent = 'Thinking...';
+    msgs.appendChild(typingBubble);
+    msgs.scrollTop = msgs.scrollHeight;
+
+    chatHistory.push({ role: 'user', content: msg });
+
+    const chatSystem = `You are a senior SAP and BI consultant answering follow-up questions about a completed data health assessment. Be specific, practical, and concise — 2-4 sentences. Reference the diagnosis when relevant. If asked about something unrelated to SAP or BI, politely redirect.
+
+Assessment context:
+${diagnosisContext}`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 400,
+          system: chatSystem,
+          messages: chatHistory
+        })
+      });
+
+      const data = await res.json();
+      const reply = data.content[0].text.trim();
+      chatHistory.push({ role: 'assistant', content: reply });
+      typingBubble.className = 'chat-bubble coach';
+      typingBubble.textContent = reply;
+    } catch {
+      typingBubble.className = 'chat-bubble coach';
+      typingBubble.textContent = 'Something went wrong — please try again.';
+    }
+
+    sendBtn.disabled = false;
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  document.getElementById('chatInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  });
+
+  function restart() {
+    currentStep = 0;
+    document.querySelectorAll('.step').forEach((s, i) => s.classList.toggle('active', i === 0));
+    document.querySelectorAll('textarea').forEach(t => t.value = '');
+    document.querySelectorAll('.error-msg').forEach(e => e.style.display = 'none');
+    document.getElementById('result').classList.remove('active');
+    document.getElementById('stepsWrap').style.display = 'block';
+    document.getElementById('progressWrap').style.display = 'block';
+    document.getElementById('chatMessages').innerHTML = '';
+    updateProgress(0);
+  }
+</script>
+</body>
+</html>
