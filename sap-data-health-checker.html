@@ -733,6 +733,20 @@
     document.getElementById('stepPct').textContent = pct + '%';
   }
 
+  document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    const activeStep = document.querySelector('.step.active');
+    if (activeStep) {
+      const stepId = activeStep.id.replace('step-', '');
+      const stepNum = parseInt(stepId);
+      if (stepNum < 10) {
+        e.preventDefault();
+        next(stepNum);
+      }
+    }
+  }
+});
+
   function next(i) {
     const val = document.getElementById('ans-' + i).value.trim();
     if (!val) { document.getElementById('err-' + i).style.display = 'block'; return; }
