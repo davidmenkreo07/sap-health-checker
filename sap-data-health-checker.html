@@ -16,7 +16,7 @@
     --surface2: #f0ede8;
     --border: #e0ddd7;
     --border2: #ccc9c3;
-    --accent: #1D9E75;
+    --accent: #1874D2;
     --accent-dim: rgba(24,116,210,0.1);
     --text: #1a1a1a;
     --muted: #6b6861;
@@ -151,7 +151,7 @@
   textarea:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(29,158,117,0.08);
+    box-shadow: 0 0 0 3px rgba(24,116,210,0.08);
   }
 
   .btn-next {
@@ -746,7 +746,7 @@
 
   function scoreColor(score, max) {
     const pct = score / max;
-    if (pct >= 0.75) return '#1D9E75';
+    if (pct >= 0.75) return '#1874D2';
     if (pct >= 0.5)  return '#854F0B';
     return '#A32D2D';
   }
