@@ -72,46 +72,7 @@
     font-weight: 300;
   }
 
-  .api-notice {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 2rem;
-    font-size: 13px;
-    color: var(--muted);
-    font-weight: 300;
-    animation: fadeUp 0.5s 0.05s ease both;
-  }
 
-  .api-notice strong { color: var(--text); font-weight: 500; }
-
-  .api-key-row { display: flex; gap: 8px; margin-top: 10px; }
-
-  .api-key-row input {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    padding: 8px 12px;
-  }
-
-  .api-key-row input:focus { outline: none; border-color: var(--accent); }
-
-  .api-key-row button {
-    background: var(--accent);
-    border: none;
-    border-radius: 8px;
-    color: #fff;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    padding: 8px 16px;
-    cursor: pointer;
-  }
 
   .progress-wrap { margin-bottom: 2.25rem; animation: fadeUp 0.5s 0.08s ease both; }
 
@@ -467,6 +428,50 @@
   .chat-send:hover { opacity: 0.85; }
   .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  .api-notice {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 2rem;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 300;
+    animation: fadeUp 0.5s 0.05s ease both;
+  }
+
+  .api-notice strong { color: var(--text); font-weight: 500; }
+
+  .api-key-row { display: flex; gap: 8px; margin-top: 10px; }
+
+  .api-key-row input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  .api-key-row input:focus { outline: none; border-color: var(--accent); }
+
+  .api-key-row button {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .api-key-row button:disabled { opacity: 0.6; cursor: not-allowed; }
+
   @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
@@ -480,12 +485,15 @@
   </div>
 
   <div class="api-notice" id="apiNotice">
-    <strong>Anthropic API key</strong> — stored in your browser only, never sent elsewhere.
+    <strong>Anthropic API key</strong> — enter once, saved in your browser only.
     <div class="api-key-row">
       <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
-      <button onclick="saveKey()">Save</button>
+      <button onclick="saveKey()" id="saveKeyBtn">Verify &amp; Save</button>
     </div>
+    <div id="apiStatus" style="font-size:12px;margin-top:8px;display:none;"></div>
   </div>
+
+
 
   <div class="progress-wrap" id="progressWrap">
     <div class="progress-meta">
@@ -635,6 +643,7 @@
     </div>
 
     <button class="btn-restart" onclick="restart()">← Run a new assessment</button>
+    <button class="btn-restart" onclick="changeKey()" style="margin-left:8px;">⚙ Change API key</button>
 
     <div class="chat-wrap">
       <div class="chat-header">Questions about your diagnosis?</div>
@@ -653,18 +662,68 @@
 <script>
   let currentStep = 0;
   const totalSteps = 11;
+  // ─── YOUR API KEY ───────────────────────────────────────────────
+  // Replace the text below with your own Anthropic API key.
+  // Keep the quotes around it. Example: 'sk-ant-api03-abc123...'
   let apiKey = localStorage.getItem('dhc_api_key') || '';
   let chatHistory = [];
   let diagnosisContext = '';
 
-  if (apiKey) document.getElementById('apiNotice').style.display = 'none';
+  // Show or hide API notice on load
+  if (apiKey) {
+    document.getElementById('apiNotice').style.display = 'none';
+  }
 
-  function saveKey() {
+  async function saveKey() {
     const val = document.getElementById('apiKeyInput').value.trim();
     if (!val) return;
-    apiKey = val;
-    localStorage.setItem('dhc_api_key', val);
-    document.getElementById('apiNotice').style.display = 'none';
+    const btn = document.getElementById('saveKeyBtn');
+    const status = document.getElementById('apiStatus');
+    btn.textContent = 'Checking...';
+    btn.disabled = true;
+    status.style.display = 'none';
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': val,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 10,
+          messages: [{ role: 'user', content: 'hi' }]
+        })
+      });
+
+      if (res.ok) {
+        apiKey = val;
+        localStorage.setItem('dhc_api_key', val);
+        status.style.color = '#1D9E75';
+        status.textContent = '✓ Key verified and saved!';
+        status.style.display = 'block';
+        setTimeout(() => {
+          document.getElementById('apiNotice').style.display = 'none';
+        }, 1000);
+      } else {
+        const err = await res.json();
+        status.style.color = '#A32D2D';
+        status.textContent = '✗ Invalid key: ' + (err.error?.message || 'check your key and try again.');
+        status.style.display = 'block';
+        localStorage.removeItem('dhc_api_key');
+        btn.textContent = 'Verify & Save';
+        btn.disabled = false;
+      }
+    } catch (e) {
+      status.style.color = '#A32D2D';
+      status.textContent = '✗ Could not connect — check your internet connection.';
+      status.style.display = 'block';
+      btn.textContent = 'Verify & Save';
+      btn.disabled = false;
+    }
   }
 
   function updateProgress(step) {
@@ -702,7 +761,7 @@
   async function diagnose() {
     const val = document.getElementById('ans-10').value.trim();
     if (!val) { document.getElementById('err-10').style.display = 'block'; return; }
-    if (!apiKey) { alert('Please enter your Anthropic API key at the top first.'); return; }
+
 
     const answers = {
       sap_modules:   document.getElementById('ans-0').value.trim(),
@@ -910,6 +969,16 @@ ${diagnosisContext}`;
   document.getElementById('chatInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
   });
+
+  function changeKey() {
+    localStorage.removeItem('dhc_api_key');
+    apiKey = '';
+    document.getElementById('apiKeyInput').value = '';
+    document.getElementById('apiStatus').style.display = 'none';
+    document.getElementById('saveKeyBtn').textContent = 'Verify & Save';
+    document.getElementById('saveKeyBtn').disabled = false;
+    document.getElementById('apiNotice').style.display = 'block';
+  }
 
   function restart() {
     currentStep = 0;
