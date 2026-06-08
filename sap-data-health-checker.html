@@ -17,7 +17,7 @@
     --border: #e0ddd7;
     --border2: #ccc9c3;
     --accent: #1D9E75;
-    --accent-dim: rgba(29,158,117,0.1);
+    --accent-dim: rgba(24,116,210,0.1);
     --text: #1a1a1a;
     --muted: #6b6861;
     --danger: #A32D2D;
@@ -104,7 +104,7 @@
     gap: 5px;
     background: var(--accent-dim);
     color: var(--accent);
-    border: 1px solid rgba(29,158,117,0.2);
+    border: 1px solid rgba(24,116,210,0.2);
     border-radius: 99px;
     font-size: 11px;
     font-family: 'DM Mono', monospace;
@@ -702,7 +702,7 @@
       if (res.ok) {
         apiKey = val;
         localStorage.setItem('dhc_api_key', val);
-        status.style.color = '#1D9E75';
+        status.style.color = '#1874D2';
         status.textContent = '✓ Key verified and saved!';
         status.style.display = 'block';
         setTimeout(() => {
